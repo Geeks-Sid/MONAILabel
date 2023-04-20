@@ -70,31 +70,37 @@ class LoadImageTensord(MapTransform):
 
 class LoadImageExd(LoadImaged):
     def __call__(self, data, reader: Optional[ImageReader] = None):
+        """
+        Transforms the input data dictionary by loading images from file paths or numpy arrays into MetaTensors.
+
+        Args:
+            data: a dictionary of input data.
+            reader: an optional ImageReader to read images from file paths.
+
+        Returns:
+            A dictionary of transformed data with the same keys as the input data.
+        """
         d = dict(data)
 
-        ignore = False
+        direct_image = False
         for i, key in enumerate(self.keys):
-            # Support direct image in np (pass only transform)
-            if not isinstance(d[key], str):
-                ignore = True
+            if isinstance(d[key], np.ndarray):
+                # Convert numpy array to MetaTensor
+                direct_image = True
                 meta_dict_key = f"{key}_{self.meta_key_postfix[i]}"
-                meta_dict = d.get(meta_dict_key)
-                if meta_dict is None:
-                    d[meta_dict_key] = dict()
-                    meta_dict = d.get(meta_dict_key)
-
+                meta_dict = d.setdefault(meta_dict_key, {})
+                meta_dict["spatial_shape"] = d[key].shape[:-1]
+                meta_dict["original_channel_dim"] = -1
+                meta_dict["original_affine"] = None
                 image_np = d[key]
-                meta_dict["spatial_shape"] = image_np.shape[:-1]  # type: ignore
-                meta_dict["original_channel_dim"] = -1  # type: ignore
-                meta_dict["original_affine"] = None  # type: ignore
-
                 d[key] = MetaTensor(image_np, meta=meta_dict)
-                continue
 
-        if not ignore:
+        if not direct_image:
+            # Load images from file paths using the parent class method
             d = super().__call__(d, reader)
 
         return d
+
 
 
 class NormalizeLabeld(MapTransform):
