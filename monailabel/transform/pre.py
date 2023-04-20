@@ -48,9 +48,6 @@ class LoadImageTensord(MapTransform):
         use_default = True
         for key in self.keys:
             if isinstance(d[key], str):
-                # Load image from file path
-                image_np = np.asarray(Image.open(d[key]))
-            else:
                 # Convert numpy array to MetaTensor
                 meta_dict_key = f"{key}_{PostFix.meta()}"
                 meta_dict = d.setdefault(meta_dict_key, {})
