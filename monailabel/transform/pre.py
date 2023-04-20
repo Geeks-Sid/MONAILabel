@@ -22,30 +22,47 @@ logger = logging.getLogger(__name__)
 
 class LoadImageTensord(MapTransform):
     def __init__(self, keys: KeysCollection, allow_missing_keys: bool = False, load_image_d=None) -> None:
+        """
+        MapTransform that loads images from file paths or numpy arrays into MetaTensors.
+
+        Args:
+            keys: keys of the data dictionary to be transformed.
+            allow_missing_keys: whether to allow missing keys in the data dictionary.
+            load_image_d: a default function to load images if all the keys are not present.
+        """
         super().__init__(keys, allow_missing_keys)
         self.load_image_d = load_image_d
 
     def __call__(self, data):
+        """
+        Transforms the input data dictionary by loading images into MetaTensors.
+
+        Args:
+            data: a dictionary of input data.
+
+        Returns:
+            A dictionary of transformed data with the same keys as the input data.
+        """
         d = dict(data)
 
         use_default = True
-        for i, key in enumerate(self.keys):
-            if not isinstance(d[key], str):
+        for key in self.keys:
+            if isinstance(d[key], str):
+                # Load image from file path
+                image_np = np.asarray(Image.open(d[key]))
+            else:
+                # Convert numpy array to MetaTensor
                 meta_dict_key = f"{key}_{PostFix.meta()}"
-                meta_dict = d.get(meta_dict_key)
-                if meta_dict is None:
-                    d[meta_dict_key] = dict()
-                    meta_dict = d.get(meta_dict_key)
-
+                meta_dict = d.setdefault(meta_dict_key, {})
+                meta_dict["spatial_shape"] = d[key].shape[:-1]
+                meta_dict["original_channel_dim"] = -1
+                meta_dict["original_affine"] = None
                 image_np = d[key]
-                meta_dict["spatial_shape"] = image_np.shape[:-1]  # type: ignore
-                meta_dict["original_channel_dim"] = -1  # type: ignore
-                meta_dict["original_affine"] = None  # type: ignore
-
                 d[key] = MetaTensor(image_np, meta=meta_dict)
                 use_default = False
 
         if use_default:
+            # Load default image if all keys are not present
             d = self.load_image_d(d)
 
         return d
