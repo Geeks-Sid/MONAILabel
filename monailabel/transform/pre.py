@@ -105,13 +105,31 @@ class LoadImageExd(LoadImaged):
 
 class NormalizeLabeld(MapTransform):
     def __init__(self, keys: KeysCollection, allow_missing_keys: bool = False, value=1) -> None:
+        """
+        MapTransform that normalizes label images by setting all non-zero values to a specified value.
+
+        Args:
+            keys: keys of the data dictionary to be transformed.
+            allow_missing_keys: whether to allow missing keys in the data dictionary.
+            value: the value to set non-zero pixels to.
+        """
         super().__init__(keys, allow_missing_keys)
         self.value = value
 
     def __call__(self, data):
+        """
+        Transforms the input data dictionary by normalizing the label images.
+
+        Args:
+            data: a dictionary of input data.
+
+        Returns:
+            A dictionary of transformed data with the same keys as the input data.
+        """
         d = dict(data)
         for key in self.keys:
             label = d[key]
             label[label > 0] = self.value
             d[key] = label
         return d
+
